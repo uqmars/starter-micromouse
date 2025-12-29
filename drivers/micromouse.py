@@ -7,6 +7,7 @@ Description: Provides a software abstraction for the Micromouse robot.
 License: MIT License
 """
 from machine import Pin, Timer
+from motor import Motor
 
 
 class Micromouse():
@@ -37,8 +38,21 @@ class Micromouse():
         if hasattr(self, 'exists'):
             return
         self.exists = True
+
+        # Inputs
+        self.button = Pin(11, Pin.IN)
+        self.left_ir = Pin(12, Pin.IN)
+        self.mid_ir = Pin(13, Pin.IN)
+        self.right_ir = Pin(14, Pin.IN)
+
+        # Outputs
         self.green_led = Pin(10, Pin.OUT)
         self.red_led = Pin(9, Pin.OUT)
+        self.debug_led = Pin(25, Pin.OUT)
+        self.left_motor = Motor(18, 17)
+        self.right_motor = Motor(21, 20)
+
+        # Other
         self.tim = Timer()
 
     def toggle_leds(self):
@@ -51,3 +65,15 @@ class Micromouse():
 
     def stop_led_toggle(self):
         self.tim.deinit()
+
+    def drive_forward(self):
+        self.left_motor.spin_backward()
+        self.right_motor.spin_forward()
+
+    def drive_backward(self):
+        self.left_motor.spin_forward()
+        self.right_motor.spin_backward()
+
+    def drive_stop(self):
+        self.left_motor.spin_stop()
+        self.right_motor.spin_stop()
