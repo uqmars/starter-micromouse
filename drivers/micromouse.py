@@ -106,7 +106,7 @@ class Micromouse():
 
         Parameters:
             frequency (int, optional): The frequency at which the LEDs should
-            blink.
+                blink.
         """
         self.blink_timer.init(mode=Timer.PERIODIC, freq=frequency,
                               callback=lambda t: self.led_toggle())
@@ -118,6 +118,34 @@ class Micromouse():
         self.blink_timer.deinit()
         self.red_led.off()
         self.green_led.off()
+
+    def ir_get_values(self, index=-1):
+        """
+        Gets the current values of the infrared object detector sensors.
+
+        Parameters:
+            index (int): The index of the desired IR Sensor, from 0 to 2 for
+                left through right respectively.
+
+        Returns:
+            Union[(bool, bool, bool), bool]:
+                The IR sensor readings in the order left, forward, right if no
+                index is provided, otherwise the result of the specified
+                sensor. True indicates an object detected.
+        """
+        if index >= 3:
+            raise IndexError("IR Sensor index should not exceed 2.")
+        left = self.left_ir.value() == 0
+        mid = self.mid_ir.value() == 0
+        right = self.right_ir.value() == 0
+        if index == 0:
+            return left
+        elif index == 1:
+            return mid
+        elif index == 2:
+            return right
+        elif index < 0:
+            return (left, mid, right)
 
     def drive_forward(self):
         """
