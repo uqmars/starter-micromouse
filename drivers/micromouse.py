@@ -1,8 +1,8 @@
 """
 Filename: micromouse.py
 Author: Quinn Horton, UQ Mechatronics and Robotics Society
-Date: 20/12/2025
-Version: 0.1
+Date: 03/01/2025
+Version: 0.5
 Description: Provides a software abstraction for the Micromouse robot.
 License: MIT License
 """
@@ -49,31 +49,105 @@ class Micromouse():
         self.green_led = Pin(10, Pin.OUT)
         self.red_led = Pin(9, Pin.OUT)
         self.debug_led = Pin(25, Pin.OUT)
-        self.left_motor = Motor(18, 17)
-        self.right_motor = Motor(21, 20)
+        self.left_motor = Motor(17, 18, 15, 16)
+        self.right_motor = Motor(21, 20, 19, 22)
 
         # Other
-        self.tim = Timer()
+        self.blink_timer = Timer()
 
-    def toggle_leds(self):
+    def led_set(self, red_val, green_val):
+        """
+        Set both red and green LEDs to provided values.
+
+        Parameters:
+            red_val (bool): The desired state of the red led.
+            green_val (bool): The desired state of the green led.
+        """
+        self.green_led.value(green_val)
+        self.red_led.value(red_val)
+
+    def led_green_set(self, value):
+        """
+        Set the green LED to the provided value.
+
+        Parameters:
+            value (bool): The desired state of the green led.
+        """
+        self.green_led.value(value)
+
+    def led_red_set(self, value):
+        """
+        Set the red LED to the provided value.
+
+        Parameters:
+            value (bool): The desired state of the red led.
+        """
+        self.red_led.value(value)
+
+    def led_debug_set(self, value):
+        """
+        Set the debug LED to the provided value.
+
+        Parameters:
+            value (bool): The desired state of the debug led.
+        """
+        self.debug_led.value(value)
+
+    def led_toggle(self):
+        """
+        Toggle both red and green LEDs when called.
+        """
         self.green_led.toggle()
         self.red_led.toggle()
 
-    def start_led_toggle(self):
-        self.tim.init(mode=Timer.PERIODIC, freq=10,
-                      callback=lambda t: self.toggle_leds())
+    def led_toggle_start(self, frequency=1):
+        """
+        Initialise an LED blinking timer for the red and green LEDs.
 
-    def stop_led_toggle(self):
-        self.tim.deinit()
+        Parameters:
+            frequency (int, optional): The frequency at which the LEDs should
+            blink.
+        """
+        self.blink_timer.init(mode=Timer.PERIODIC, freq=frequency,
+                              callback=lambda t: self.led_toggle())
+
+    def led_toggle_stop(self):
+        """
+        Stop the blinking of the onboard red and green LEDs and turn them off.
+        """
+        self.blink_timer.deinit()
+        self.red_led.off()
+        self.green_led.off()
 
     def drive_forward(self):
-        self.left_motor.spin_backward()
+        """
+        Turn both motors on to drive forward at full speed.
+        """
+        self.left_motor.spin_forward()
         self.right_motor.spin_forward()
 
     def drive_backward(self):
-        self.left_motor.spin_forward()
+        """
+        Turn both motors on to drive backward at full speed.
+        """
+        self.left_motor.spin_backward()
         self.right_motor.spin_backward()
 
     def drive_stop(self):
+        """
+        Turn off both motors.
+        """
         self.left_motor.spin_stop()
         self.right_motor.spin_stop()
+
+    def encoders_get(self):
+        """
+        Get the rotational frequency of both motor encoders, signed for
+            direction.
+
+        Returns:
+            (int, int): The left and right encoder readings respectively.
+        """
+        left_enc = self.left_motor.encoder_read()
+        right_enc = self.right_motor.encoder_read()
+        return (left_enc, right_enc)
