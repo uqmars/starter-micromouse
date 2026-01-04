@@ -41,16 +41,17 @@ class Micromouse():
 
         # Inputs
         self.button = Pin(11, Pin.IN)
-        self.left_ir = Pin(12, Pin.IN)
-        self.mid_ir = Pin(13, Pin.IN)
-        self.right_ir = Pin(14, Pin.IN)
+        self.ir_1 = Pin(12, Pin.IN)
+        self.ir_2 = Pin(13, Pin.IN)
+        self.ir_3 = Pin(14, Pin.IN)
 
         # Outputs
         self.green_led = Pin(10, Pin.OUT)
         self.red_led = Pin(9, Pin.OUT)
         self.debug_led = Pin(25, Pin.OUT)
-        self.left_motor = Motor(17, 18, 15, 16)
-        self.right_motor = Motor(21, 20, 19, 22)
+        self.motor_2 = Motor(17, 18, 15, 16)
+        self.motor_1 = Motor(21, 20, 19, 22)
+        self.motor_2.invert_motor()
 
         # Other
         self.blink_timer = Timer()
@@ -119,63 +120,90 @@ class Micromouse():
         self.red_led.off()
         self.green_led.off()
 
-    def ir_get_values(self, index=-1):
+    def get_ir_values(self, index=0):
         """
         Gets the current values of the infrared object detector sensors.
 
         Parameters:
-            index (int): The index of the desired IR Sensor, from 0 to 2 for
-                left through right respectively.
+            index (int): The number of the IR sensor to read. 1 for IR1
+            and 3 for IR3
 
         Returns:
             Union[(bool, bool, bool), bool]:
-                The IR sensor readings in the order left, forward, right if no
+                The IR sensor readings in the order 1, 2, 3 if no
                 index is provided, otherwise the result of the specified
                 sensor. True indicates an object detected.
         """
-        if index >= 3:
+        if index >= 4:
             raise IndexError("IR Sensor index should not exceed 2.")
-        left = self.left_ir.value() == 0
-        mid = self.mid_ir.value() == 0
-        right = self.right_ir.value() == 0
-        if index == 0:
-            return left
-        elif index == 1:
-            return mid
+        sensor_1 = self.ir_1.value() == 0
+        sensor_2 = self.ir_2.value() == 0
+        sensor_3 = self.ir_3.value() == 0
+        if index == 1:
+            return sensor_1
         elif index == 2:
-            return right
-        elif index < 0:
-            return (left, mid, right)
+            return sensor_2
+        elif index == 3:
+            return sensor_3
+        elif index < 1:
+            return (sensor_1, sensor_2, sensor_3)
 
-    def drive_forward(self):
+    def drive_forward(self, power = 255):
         """
         Turn both motors on to drive forward at full speed.
-        """
-        self.left_motor.spin_forward()
-        self.right_motor.spin_forward()
 
-    def drive_backward(self):
+        Parameters:
+            power (int): Optional speed to run motors at
+        """
+        self.motor_2.spin_forward(power)
+        self.motor_1.spin_forward(power)
+
+    def drive_backward(self, power = 255):
         """
         Turn both motors on to drive backward at full speed.
+
+        Parameters:
+            power (int): Optional speed to run motors at
         """
-        self.left_motor.spin_backward()
-        self.right_motor.spin_backward()
+        self.motor_2.spin_backward(power)
+        self.motor_1.spin_backward(power)
 
     def drive_stop(self):
         """
         Turn off both motors.
         """
-        self.left_motor.spin_stop()
-        self.right_motor.spin_stop()
+        self.motor_2.spin_stop()
+        self.motor_1.spin_stop()
 
-    def encoders_get(self):
+    def get_encoders(self):
         """
         Get the rotational frequency of both motor encoders, signed for
             direction.
 
         Returns:
-            (int, int): The left and right encoder readings respectively.
+            (int, int): Encoder 1, and encoder 2 reading respectively
         """
-        left_enc = self.left_motor.encoder_read()
-        right_enc = self.right_motor.encoder_read()
-        return (left_enc, right_enc)
+        encoder_2 = self.motor_2.encoder_read()
+        encoder_1 = self.motor_1.encoder_read()
+        return (encoder_2, encoder_1)
+    
+    def get_button(self):
+        """
+        Gets the value of the built-in button
+        
+        Returns:
+            (bool): True if button is pressed
+        """
+        return self.button.value() < 1
+    
+    def invert_motor_1(self):
+        """
+        Toggles the invert direction of motor 1
+        """
+        self.motor_1.invert_motor()
+    
+    def invert_motor_2(self):
+        """
+        Toggles the invert direction of motor 2
+        """
+        self.motor_2.invert_motor()

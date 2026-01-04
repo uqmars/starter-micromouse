@@ -27,12 +27,13 @@ class Motor():
         """
         Initialises the member variables upon first creation.
         """
-        self.m1 = Pin(m1_pin, Pin.OUT)
-        self.m2 = Pin(m2_pin, Pin.OUT)
+        self.m1 = PWM(Pin(m1_pin), freq = 2000)
+        self.m2 = PWM(Pin(m2_pin), freq = 2000)
 
         self._encoder = RotaryIRQ(e1_pin, e2_pin)
+        self._invert = False
     
-    def _constrain(self, value, min_value, max_value):
+    def constrain(self, value, min_value, max_value):
         """
         Constrains a value to remain within a specified range
 
@@ -51,9 +52,8 @@ class Motor():
         Parameters:
             power (int): Power to drive forwards at. [0, 255]
         """
-        limited_power = self._constrain(power, 0, 255)
-        self.m1.on()
-        self.m2.off()
+        limited_power = self.constrain(power, 0, 255)
+        self.spin_power(limited_power)
 
     def spin_backward(self, power = 255):
         """
@@ -63,10 +63,9 @@ class Motor():
         Parameters:
             power (int): Power to drive backwards at. [0, 255]
         """
-        limited_power = self._constrain(power, 0, 255)
-        self.m2.on()
-        self.m1.off()
-
+        limited_power = self.constrain(power, 0, 255)
+        self.spin_power(limited_power * -1)
+        
     def spin_power(self, power):
         """
         Runs the motor to a specified speed with a direction given between -255 and 255.
@@ -76,17 +75,19 @@ class Motor():
             power (int): Desired power to run the motor at. [-255, 255]
         """
         limited_power = self.constrain(power, -255, 255)
-        if limited_power < 0:
-            self.spin_backward(abs(limited_power))
+        if (limited_power > 0) ^ self._invert:
+            self.m2.duty_u16(limited_power * 257)
+            self.m1.duty_u16(0)
         else:
-            self.spin_forward(limited_power)
+            self.m1.duty_u16(limited_power * 257)
+            self.m2.duty_u16(0)
 
     def spin_stop(self):
         """
         Turns off the motor.
         """
-        self.m1.off()
-        self.m2.off()
+        self.m1.duty_u16(0)
+        self.m2.duty_u16(0)
 
     def encoder_read(self):
         """
@@ -96,3 +97,9 @@ class Motor():
             int: The rotational frequency of the motor (signed for direction).
         """
         return self._encoder.value()
+    
+    def invert_motor(self):
+        """
+        Toggles the default direction for the motor
+        """
+        self._invert = not self._invert
