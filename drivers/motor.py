@@ -6,7 +6,8 @@ Version: 0.5
 Description: Provides a software abstraction for the system motors.
 License: MIT License
 """
-from machine import Pin
+from machine import Pin, PWM
+from rotary_irq_rp2 import RotaryIRQ
 
 
 class Motor():
@@ -26,31 +27,67 @@ class Motor():
         """
         Initialises the member variables upon first creation.
         """
-        self.m1 = Pin(m1_pin, Pin.OUT)
-        self.m2 = Pin(m2_pin, Pin.OUT)
-        self.e1 = Pin(e1_pin, Pin.IN)
-        self.e2 = Pin(e2_pin, Pin.IN)
+        self.m1 = PWM(Pin(m1_pin), freq = 2000)
+        self.m2 = PWM(Pin(m2_pin), freq = 2000)
 
-    def spin_forward(self):
+        self._encoder = RotaryIRQ(e1_pin, e2_pin)
+        self._invert = False
+    
+    def constrain(self, value, min_value, max_value):
         """
-        Turns on the motor to spin in the forward direction.
-        """
-        self.m1.on()
-        self.m2.off()
+        Constrains a value to remain within a specified range
 
-    def spin_backward(self):
+        Parameters:
+            value (int): The value to constrain
+            min_value (int): Minimum allowable range of value
+            max_value (int): Maximum allowable range of value 
         """
-        Turns on the motor to spin in the reverse direction.
+        return min(max_value, max(min_value, value))
+
+    def spin_forward(self, power = 255):
         """
-        self.m2.on()
-        self.m1.off()
+        Turns on the motor to spin max speed in the forward direction.
+        Optional power parameter defaulted to max.
+
+        Parameters:
+            power (int): Power to drive forwards at. [0, 255]
+        """
+        limited_power = self.constrain(power, 0, 255)
+        self.spin_power(limited_power)
+
+    def spin_backward(self, power = 255):
+        """
+        Turns on the motor to spin max speed in the reverse direction.
+        Optional power parameter defaulted to max.
+
+        Parameters:
+            power (int): Power to drive backwards at. [0, 255]
+        """
+        limited_power = self.constrain(power, 0, 255)
+        self.spin_power(limited_power * -1)
+        
+    def spin_power(self, power):
+        """
+        Runs the motor to a specified speed with a direction given between -255 and 255.
+        Negative power runs the motor backwards.
+
+        Parameters:
+            power (int): Desired power to run the motor at. [-255, 255]
+        """
+        limited_power = self.constrain(power, -255, 255)
+        if (limited_power > 0) ^ self._invert:
+            self.m2.duty_u16(limited_power * 257)
+            self.m1.duty_u16(0)
+        else:
+            self.m1.duty_u16(limited_power * 257)
+            self.m2.duty_u16(0)
 
     def spin_stop(self):
         """
         Turns off the motor.
         """
-        self.m1.off()
-        self.m2.off()
+        self.m1.duty_u16(0)
+        self.m2.duty_u16(0)
 
     def encoder_read(self):
         """
@@ -59,4 +96,10 @@ class Motor():
         Returns:
             int: The rotational frequency of the motor (signed for direction).
         """
-        return 0
+        return self._encoder.value()
+    
+    def invert_motor(self):
+        """
+        Toggles the default direction for the motor
+        """
+        self._invert = not self._invert
