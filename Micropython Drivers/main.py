@@ -11,4 +11,4 @@ mm = Micromouse()
 
 if __name__ == "__main__":
     while True:
-        mm.led_green_set(0)
+        mm.led_green_set(1)
